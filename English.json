@@ -1,0 +1,30 @@
+{
+  "welcome": ["Hello and welcome! This bot provides convenient registration in our system and receiving the latest news", "Registration", "Log in"],
+  "FIO": ["Enter your first and last name in this order", 2],
+  "nickname": "Choose your nickname in the system",
+  "gender": ["Choose your gender", {"male": "M", "female": "F", "another": "Another"}],
+  "linked_error": "Error. A TGC account is already linked to this Telegram one",
+  "name_error": "Please, enter your correct name and surname",
+  "region": ["Choose your region", {"russia": "Russia", "europe": "Europe", "asia": "Asia", "south america": "South America", "nord america": "Nord America", "australia": "Australia and Oceania"}],
+  "nick_error": "This nick is already taken, choose another one",
+  "psw_error": "The password must have at least 6 characters",
+  "psw": "Enter your password. This is not important now, but don't forgot it",
+  "suc_reg": "Successfully registration!",
+  "mm": "Main menu",
+  "choose_role": ["You have registered as a regular user. Do you want to change your role?", {
+    "stay_user": "Stay user", "become_beta": "I want to become a beta-tester", "become_dev": "I want to become an employee"
+  }, "Why do you want to become one?"],
+  "date": "Enter your date of birth: day, month, year (separated by a space)",
+  "date_error": "Please, enter correct date",
+  "login_error": "You are not registered yet",
+  "log_suc": "You logged as",
+  "application": "Your application has been sent to the administrators, they will contact you soon",
+  "main_menu": ["This is the main menu! Select the function you need:", {"news": "News \uD83D\uDCF0", "settings": "Settings ⚙"}],
+  "settings": ["These are settings. Select the parameter you need:", {"choose_lg": "Language change", "forg_pass": "Remind password", "del_ac": "Account deletion"}],
+  "rechoce": "Choose your new language:",
+  "suc_rec": "The language has been successfully changed!",
+  "del_conf": ["Your account will be deleted. Confirm the action:", {"conf": "Delete", "settings": "Return to settings"}],
+  "suc_del": "Account has been successfully deleted! Press /start",
+  "rem_pas": "Your password is: ",
+  "news_events": ["No news yet", "End of the news list", {"n_back": "<-", "n_forw": "->"}]
+}
