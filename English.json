@@ -1,3 +1,5 @@
+{"default": {"lg_style": "Choose language style:"},
+  "Standart":
 {
   "welcome": ["Hello and welcome! This bot provides convenient registration in our system and receiving the latest news", "Registration", "Log in"],
   "FIO": ["Enter your first and last name in this order", 2],
@@ -27,4 +29,5 @@
   "suc_del": "Account has been successfully deleted! Press /start",
   "rem_pas": "Your password is: ",
   "news_events": ["No news yet", "End of the news list", {"n_back": "<-", "n_forw": "->"}]
+}
 }

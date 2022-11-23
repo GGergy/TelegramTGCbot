@@ -6,7 +6,7 @@ from openpyxl import load_workbook
 from config import TOKEN
 
 
-VERSION = "0.2.0 stable by Gergy"
+VERSION = "0.2.2 stable by Gergy"
 users = {}
 bot = telebot.TeleBot(TOKEN)
 admins_id = [1694307474, 5468165968]
@@ -81,7 +81,25 @@ def choose_lg(call):
         users[message.chat.id] = User(message.chat.id)
     users[message.chat.id].language = call.data
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        msg = json.load(f)['welcome']
+        data = json.load(f)
+    markup = types.InlineKeyboardMarkup()
+    users[message.chat.id].curr_lgp = []
+    for key in data.keys():
+        if key == 'default':
+            continue
+        b = types.InlineKeyboardButton(key, callback_data=key)
+        markup.row(b)
+        users[message.chat.id].curr_lgp.append(key)
+    bot.edit_message_text(chat_id=message.chat.id, message_id=message.id, text=data["default"]["lg_style"],
+                          reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data in users[call.message.chat.id].curr_lgp)
+def lg_pack(call):
+    message = call.message
+    users[message.chat.id].lgp = call.data
+    with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
+        msg = json.load(f)[users[message.chat.id].lgp]['welcome']
     markup = types.InlineKeyboardMarkup()
     b1 = types.InlineKeyboardButton(msg[1], callback_data='reg')
     b2 = types.InlineKeyboardButton(msg[2], callback_data='log')
@@ -94,7 +112,7 @@ def choose_lg(call):
 def reg(call):
     message = call.message
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     print(wb.sheetnames, call.message.chat.id)
     if str(call.message.chat.id) in wb.sheetnames:
         markup = types.InlineKeyboardMarkup()
@@ -110,7 +128,7 @@ def reg(call):
 
 def get_name(message):
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     name = message.text
     mid = users[message.chat.id].message_id
     print(name)
@@ -137,7 +155,7 @@ def get_gender(call):
     gender = call.data
     users[message.chat.id].gender = gender
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     markup = types.InlineKeyboardMarkup()
     for key, item in jsf['region'][1].items():
         b = types.InlineKeyboardButton(item, callback_data=key)
@@ -151,7 +169,7 @@ def get_region(call):
     region = call.data
     users[call.message.chat.id].region = region
     with open(users[call.message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[call.message.chat.id].lgp]
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.id, text=jsf['date'])
     bot.register_next_step_handler(call.message, get_date)
 
@@ -160,7 +178,7 @@ def get_date(message):
     date = message.text.split()
     print(date)
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     try:
         time_now = dtm.date.today()
         time = dtm.date(year=int(date[2]), month=int(date[1]), day=int(date[0]))
@@ -187,7 +205,7 @@ def get_nickname(message):
     global wb
     nn = message.text
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     nicks = []
     for i in wb.sheetnames:
         nicks.append(wb[i]['A2'].value)
@@ -209,7 +227,7 @@ def get_nickname(message):
 def create_password(message):
     psw = message.text
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     if len(psw) < 6:
         try:
             bot.edit_message_text(chat_id=message.chat.id, text=jsf['psw_error'],
@@ -237,7 +255,7 @@ def create_password(message):
 @bot.callback_query_handler(func=lambda call: call.data in ["stay_user", "become_beta", "become_dev"])
 def get_role(call):
     with open(users[call.message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[call.message.chat.id].lgp]
     if call.data == 'stay_user':
         markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
         bot.edit_message_text(chat_id=call.message.chat.id, text=jsf['suc_reg'], message_id=call.message.id,
@@ -252,7 +270,7 @@ def get_role(call):
 
 def do_beta(message):
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
     bot.edit_message_text(chat_id=message.chat.id, text=jsf['application'],
                           message_id=users[message.chat.id].message_id, reply_markup=markup)
@@ -263,7 +281,7 @@ def do_beta(message):
 
 def do_dev(message):
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
     bot.edit_message_text(chat_id=message.chat.id, text=jsf['application'],
                           message_id=users[message.chat.id].message_id, reply_markup=markup)
@@ -275,7 +293,7 @@ def do_dev(message):
 @bot.callback_query_handler(func=lambda call: call.data == 'log')
 def log(call):
     with open(users[call.message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[call.message.chat.id].lgp]
     if str(call.message.chat.id) in wb.sheetnames:
         users[call.message.chat.id].load_info()
         print(users[call.message.chat.id].tg_name, 'вошел в аккаунт')
@@ -300,7 +318,7 @@ def deleter(message):
 def main_menu(call):
     message = call.message
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     markup = types.InlineKeyboardMarkup()
     for key, elem in jsf['main_menu'][1].items():
         b = types.InlineKeyboardButton(elem, callback_data=key)
@@ -313,7 +331,7 @@ def main_menu(call):
 def news(call):
     message = call.message
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     with open(f'news_{users[message.chat.id].language}.txt', encoding='utf-8') as f:
         active_news = f.read()
     if not active_news:
@@ -335,7 +353,7 @@ def news(call):
 def settings(call):
     message = call.message
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     markup = types.InlineKeyboardMarkup()
     for key, elem in jsf['settings'][1].items():
         b = types.InlineKeyboardButton(elem, callback_data=key)
@@ -348,7 +366,7 @@ def settings(call):
 def rechoose_lg(call):
     message = call.message
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     markup = types.InlineKeyboardMarkup()
     for lg in languages:
         b1 = types.InlineKeyboardButton(languages_emojies[lg] + lg + languages_emojies[lg], callback_data=lg + 'n')
@@ -361,7 +379,25 @@ def confrim_lgc(call):
     message = call.message
     users[message.chat.id].language = call.data[:-1]
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        data = json.load(f)
+    markup = types.InlineKeyboardMarkup()
+    users[message.chat.id].curr_lgp = []
+    for key in data.keys():
+        if key == 'default':
+            continue
+        b = types.InlineKeyboardButton(key, callback_data=key + 'n')
+        markup.row(b)
+        users[message.chat.id].curr_lgp.append(key)
+    bot.edit_message_text(chat_id=message.chat.id, message_id=message.id, text=data["default"]["lg_style"],
+                          reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data[:-1] in users[call.message.chat.id].curr_lgp)
+def rec_lgp(call):
+    message = call.message
+    users[message.chat.id].lgp = call.data[:-1]
+    with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
+        jsf = json.load(f)[users[message.chat.id].lgp]
     markup = types.InlineKeyboardMarkup()
     markup.row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
     bot.edit_message_text(chat_id=message.chat.id, message_id=message.id, text=jsf['suc_rec'], reply_markup=markup)
@@ -371,7 +407,7 @@ def confrim_lgc(call):
 def del_ac(call):
     message = call.message
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     markup = types.InlineKeyboardMarkup()
     for key, elem in jsf['del_conf'][1].items():
         b = types.InlineKeyboardButton(elem, callback_data=key)
@@ -383,7 +419,7 @@ def del_ac(call):
 def del_conf(call):
     message = call.message
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     users[call.message.chat.id] = None
     wb.remove(wb[str(call.message.chat.id)])
     wb.save('data.xlsx')
@@ -394,7 +430,7 @@ def del_conf(call):
 def forg_pass(call):
     message = call.message
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[message.chat.id].lgp]
     with open('passwords.json', encoding='utf-8') as f:
         data = json.load(f)
     markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['del_conf'][1]['settings'],
@@ -407,7 +443,7 @@ def forg_pass(call):
 @bot.callback_query_handler(func=lambda call: call.data in ["n_back", 'n_forw'])
 def news_engine(call):
     with open(users[call.message.chat.id].language + '.json', encoding='utf-8') as f:
-        jsf = json.load(f)
+        jsf = json.load(f)[users[call.message.chat.id].lgp]
     with open(f'news_{users[call.message.chat.id].language}.txt', encoding='utf-8') as f:
         active_news = f.read()
     if not active_news:
