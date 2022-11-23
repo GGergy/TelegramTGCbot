@@ -6,7 +6,7 @@ from openpyxl import load_workbook
 from config import TOKEN
 
 
-VERSION = "0.2.2 stable by Gergy"
+VERSION = "0.2.3 stable by Gergy"
 users = {}
 bot = telebot.TeleBot(TOKEN)
 admins_id = [1694307474, 5468165968]
@@ -28,7 +28,8 @@ class User:
         self.verify = False
         self.is_online = False
         self.language = None
-        self.roots = None
+        self.is_beta = "False"
+        self.is_dev = "False"
 
     def upload_info(self):
         wb.create_sheet(str(self.id))
@@ -39,6 +40,8 @@ class User:
         sheet['A4'].value = self.region
         sheet['A5'].value = self.tg_name
         sheet['A6'].value = self.date
+        sheet['B1'].value = "False"
+        sheet['B2'].value = "False"
         wb.save('data.xlsx')
         print(1)
         self.verify = True
@@ -51,7 +54,8 @@ class User:
         self.region = sheet['A4'].value
         self.tg_name = sheet['A5'].value
         self.date = sheet['A6'].value
-        self.roots = [el for el in [elem.value for elem in sheet['B']]]
+        self.is_beta = sheet['B1'].value
+        self.is_dev = sheet['B2'].value
         self.is_online = True
 
     def __str__(self):
@@ -75,10 +79,6 @@ def start(message):
 @bot.callback_query_handler(func=lambda call: call.data in languages)
 def choose_lg(call):
     message = call.message
-    if call.data not in languages:
-        return
-    if message.chat.id not in users:
-        users[message.chat.id] = User(message.chat.id)
     users[message.chat.id].language = call.data
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
         data = json.load(f)
@@ -91,7 +91,7 @@ def choose_lg(call):
         markup.row(b)
         users[message.chat.id].curr_lgp.append(key)
     bot.edit_message_text(chat_id=message.chat.id, message_id=message.id, text=data["default"]["lg_style"],
-                          reply_markup=markup)
+                          reply_markup=markup, parse_mode='Markdown')
 
 
 @bot.callback_query_handler(func=lambda call: call.data in users[call.message.chat.id].curr_lgp)
@@ -164,7 +164,8 @@ def get_gender(call):
     bot.edit_message_text(chat_id=message.chat.id, message_id=message.id, text=txt, reply_markup=markup)
 
 
-@bot.callback_query_handler(func=lambda call: call.data in ['russia', 'europe', 'asia', 'australia', 'south america', 'nord america'])
+@bot.callback_query_handler(func=lambda call: call.data in ['russia', 'europe',
+                                                            'asia', 'australia', 'south america', 'nord america'])
 def get_region(call):
     region = call.data
     users[call.message.chat.id].region = region
@@ -243,12 +244,13 @@ def create_password(message):
     print(users[message.chat.id].tg_name, 'зарегестрировался')
     with open("passwords.json", "w") as write_file:
         json.dump(passwords, write_file)
-    markup = types.InlineKeyboardMarkup()
-    for key, elem in jsf["choose_role"][1].items():
-        b = types.InlineKeyboardButton(elem, callback_data=key)
-        markup.row(b)
-    bot.edit_message_text(chat_id=message.chat.id, text=jsf['choose_role'][0], reply_markup=markup,
-                          message_id=users[message.chat.id].message_id)
+    markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
+    dd = jsf["data_review"][1]
+    u = users[message.chat.id]
+    user_data = f'{jsf["data_review"][0]}\n{dd["name"]} - {u.name}\n{dd["gender"]} - {jsf["gender"][1][u.gender]}' \
+                f'\n{dd["region"]} - {jsf["region"][1][u.region]}\n{dd["date"]} - {u.date}'
+    bot.edit_message_text(chat_id=message.chat.id, text=f"{jsf['suc_reg']}\n{user_data}",
+                          message_id=users[message.chat.id].message_id, reply_markup=markup)
     bot.delete_message(message.chat.id, message.id)
 
 
@@ -256,25 +258,24 @@ def create_password(message):
 def get_role(call):
     with open(users[call.message.chat.id].language + '.json', encoding='utf-8') as f:
         jsf = json.load(f)[users[call.message.chat.id].lgp]
-    if call.data == 'stay_user':
-        markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
-        bot.edit_message_text(chat_id=call.message.chat.id, text=jsf['suc_reg'], message_id=call.message.id,
-                              reply_markup=markup)
-    else:
+    if call.data == 'become_beta':
+        bot.register_next_step_handler(call.message, do_beta)
         bot.edit_message_text(text=jsf["choose_role"][2], chat_id=call.message.chat.id, message_id=call.message.id)
-        if call.data == 'become_beta':
-            bot.register_next_step_handler(call.message, do_beta)
-        else:
-            bot.register_next_step_handler(call.message, do_dev)
+    else:
+        bot.edit_message_text(text=jsf["choose_role"][3], chat_id=call.message.chat.id, message_id=call.message.id)
+        bot.register_next_step_handler(call.message, do_dev)
 
 
 def do_beta(message):
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
         jsf = json.load(f)[users[message.chat.id].lgp]
-    markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
+    markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['del_conf'][1]['settings'],
+                                                                         callback_data='settings'))
     bot.edit_message_text(chat_id=message.chat.id, text=jsf['application'],
                           message_id=users[message.chat.id].message_id, reply_markup=markup)
     bot.delete_message(chat_id=message.chat.id, message_id=message.id)
+    users[message.chat.id].is_beta = 'processing'
+    users[message.chat.id].upload_info()
     for a in admins_id:
         bot.send_message(a, f'@{message.from_user.username} хочет быть бета-тестером со словами:\n{message.text}')
 
@@ -282,10 +283,13 @@ def do_beta(message):
 def do_dev(message):
     with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
         jsf = json.load(f)[users[message.chat.id].lgp]
-    markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
+    markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['del_conf'][1]['settings'],
+                                                                         callback_data='settings'))
     bot.edit_message_text(chat_id=message.chat.id, text=jsf['application'],
                           message_id=users[message.chat.id].message_id, reply_markup=markup)
     bot.delete_message(chat_id=message.chat.id, message_id=message.id)
+    users[message.chat.id].is_dev = 'processing'
+    users[message.chat.id].upload_info()
     for a in admins_id:
         bot.send_message(a, f'@{message.from_user.username} хочет быть разрабом со словами:\n{message.text}')
 
@@ -342,7 +346,7 @@ def news(call):
     b = []
     for key, elem in jsf['news_events'][-1].items():
         b.append(types.InlineKeyboardButton(elem, callback_data=key))
-    markup.add(*b )
+    markup.add(*b)
     markup.row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
     users[message.chat.id].news_day = 0
     bot.edit_message_text(chat_id=message.chat.id, message_id=message.id, text=active_news[0],
@@ -389,7 +393,7 @@ def confrim_lgc(call):
         markup.row(b)
         users[message.chat.id].curr_lgp.append(key)
     bot.edit_message_text(chat_id=message.chat.id, message_id=message.id, text=data["default"]["lg_style"],
-                          reply_markup=markup)
+                          reply_markup=markup, parse_mode='Markdown')
 
 
 @bot.callback_query_handler(func=lambda call: call.data[:-1] in users[call.message.chat.id].curr_lgp)
@@ -468,6 +472,51 @@ def news_engine(call):
     markup.row(types.InlineKeyboardButton(jsf['mm'], callback_data='main_menu'))
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.id,
                           text=active_news[users[call.message.chat.id].news_day], reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'ch_role')
+def role_menu(call):
+    message = call.message
+    with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
+        jsf = json.load(f)[users[message.chat.id].lgp]
+    if users[message.chat.id].is_beta == 'processing' or users[message.chat.id].is_dev == 'processing':
+        markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['del_conf'][1]['settings'],
+                                                                             callback_data='settings'))
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.id,
+                              text=jsf['role_error'], reply_markup=markup)
+        return
+    if users[message.chat.id].is_dev == "True":
+        markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['del_conf'][1]['settings'],
+                                                                             callback_data='settings'))
+        markup.row(types.InlineKeyboardButton(jsf['supreme'][1], callback_data='call_admin'))
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.id,
+                              text=jsf['supreme'][0], reply_markup=markup)
+        return
+    markup = types.InlineKeyboardMarkup()
+    if users[message.chat.id].is_beta == "False":
+        b = types.InlineKeyboardButton(jsf['choose_role'][1]['become_beta'], callback_data='become_beta')
+        markup.row(b)
+        txt = jsf['from_beta_to_dev']
+    else:
+        txt = jsf['choose_role'][0]
+    users[message.chat.id].message_id = message.id
+    b = types.InlineKeyboardButton(jsf['choose_role'][1]['become_dev'], callback_data='become_dev')
+    markup.row(b)
+    b = types.InlineKeyboardButton(jsf['del_conf'][1]['settings'], callback_data='settings')
+    markup.row(b)
+    bot.edit_message_text(chat_id=message.chat.id, text=txt, reply_markup=markup,
+                          message_id=call.message.id)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'call_admin')
+def call_admin(call):
+    message = call.message
+    with open(users[message.chat.id].language + '.json', encoding='utf-8') as f:
+        jsf = json.load(f)[users[message.chat.id].lgp]
+    markup = types.InlineKeyboardMarkup().row(types.InlineKeyboardButton(jsf['del_conf'][1]['settings'],
+                                                                         callback_data='settings'))
+    bot.edit_message_text(chat_id=message.chat.id, text=f"{jsf['admins']} + @TGurchinC @AsusROG_fan",
+                          reply_markup=markup, message_id=call.message.id)
 
 
 bot.remove_webhook()
